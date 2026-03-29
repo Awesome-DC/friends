@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background -->
+  <rect width="200" height="200" rx="40" fill="#534AB7"/>
+
+  <!-- Left person - head -->
+  <circle cx="76" cy="76" r="24" fill="#CECBF6"/>
+  <!-- Left person - body -->
+  <ellipse cx="76" cy="122" rx="20" ry="26" fill="#CECBF6"/>
+
+  <!-- Right person - head -->
+  <circle cx="124" cy="76" r="24" fill="#F0997B"/>
+  <!-- Right person - body -->
+  <ellipse cx="124" cy="122" rx="20" ry="26" fill="#F0997B"/>
+
+  <!-- Heart between them at top -->
+  <path d="M100,60 C100,48 86,44 86,56 C86,63 100,72 100,72 C100,72 114,63 114,56 C114,44 100,48 100,60 Z" fill="white"/>
+
+  <!-- Hands joined in center -->
+  <circle cx="86" cy="110" r="8" fill="#AFA9EC"/>
+  <circle cx="114" cy="110" r="8" fill="#F5C4B3"/>
+  <rect x="86" y="106" width="28" height="10" rx="5" fill="#C4AAEE" opacity="0.75"/>
+</svg>

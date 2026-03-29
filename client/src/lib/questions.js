@@ -1,0 +1,66 @@
+// client/src/lib/questions.js
+
+export const QUESTIONS = [
+  {
+    key: "q1",
+    label: "Favourite food",
+    question: "What is {name}'s favourite food?",
+    photo: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900&q=80",
+    emoji: "🍽️",
+    color: "rgba(180, 60, 20, 0.45)",
+  },
+  {
+    key: "q2",
+    label: "Favourite colour",
+    question: "What is {name}'s favourite colour?",
+    photo: "https://images.unsplash.com/photo-1525909002-1b05e0c869d8?w=900&q=80",
+    emoji: "🎨",
+    color: "rgba(60, 20, 120, 0.45)",
+  },
+  {
+    key: "q3",
+    label: "Biggest fear",
+    question: "What is {name}'s biggest fear?",
+    photo: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=900&q=80",
+    emoji: "😱",
+    color: "rgba(10, 10, 40, 0.55)",
+  },
+  {
+    key: "q4",
+    label: "Dream holiday destination",
+    question: "Where does {name} dream of going on holiday?",
+    photo: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&q=80",
+    emoji: "✈️",
+    color: "rgba(0, 80, 140, 0.40)",
+  },
+  {
+    key: "q5",
+    label: "Hidden talent",
+    question: "What is {name}'s hidden talent?",
+    photo: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=900&q=80",
+    emoji: "✨",
+    color: "rgba(120, 20, 80, 0.45)",
+  },
+];
+
+export const RELATIONS = [
+  "Best Friend",
+  "Close Friend",
+  "Friend",
+  "Classmate",
+  "Colleague",
+  "Sibling",
+  "Brother",
+  "Sister",
+  "Cousin",
+  "Parent",
+  "Mother",
+  "Father",
+  "Aunt / Uncle",
+  "Crush",
+  "Partner / Lover",
+  "Neighbour",
+  "Roommate",
+  "Online Friend",
+  "Other",
+];
