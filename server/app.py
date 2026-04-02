@@ -51,7 +51,12 @@ def handle_preflight():
 
 # ── DB detection ─────────────────────────────────────────────
 DATABASE_URL = os.environ.get("DATABASE_URL")
-USE_POSTGRES  = bool(DATABASE_URL)
+
+# FIX 1: Render gives postgres:// but psycopg2 needs postgresql://
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+USE_POSTGRES = bool(DATABASE_URL)
 
 if USE_POSTGRES:
     import psycopg2
@@ -321,9 +326,12 @@ def health():
     return jsonify({"status": "ok"})
 
 
+# FIX 2: init_db at app level so gunicorn runs it (not just __main__)
+with app.app_context():
+    init_db()
+
 # ── Run ───────────────────────────────────────────────────────
 if __name__ == "__main__":
-    init_db()
     port = int(os.environ.get("PORT", 3001))
     print(f"🚀 FriendQuiz running at http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=not USE_POSTGRES)
