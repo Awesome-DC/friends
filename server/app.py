@@ -118,6 +118,7 @@ def init_db():
                 code         TEXT UNIQUE NOT NULL,
                 creator_name TEXT NOT NULL,
                 answers      TEXT NOT NULL,
+                sets         TEXT NOT NULL DEFAULT '[]',
                 created_at   TIMESTAMPTZ DEFAULT now()
             );
             CREATE TABLE IF NOT EXISTS quiz_results (
@@ -152,6 +153,7 @@ def init_db():
                 code         TEXT UNIQUE NOT NULL,
                 creator_name TEXT NOT NULL,
                 answers      TEXT NOT NULL,
+                sets         TEXT NOT NULL DEFAULT '[]',
                 created_at   TEXT DEFAULT (datetime('now'))
             );
             CREATE TABLE IF NOT EXISTS quiz_results (
@@ -206,11 +208,12 @@ def create_quiz():
     answers      = data.get("answers")
     if not creator_name or not answers:
         return jsonify({"error": "creatorName and answers are required"}), 400
+    sets    = data.get("sets", [])
     quiz_id = str(uuid.uuid4())
     code    = make_code()
     try:
-        db_exec("INSERT INTO quizzes (id, code, creator_name, answers) VALUES (?, ?, ?, ?)",
-                (quiz_id, code, creator_name, json.dumps(answers)))
+        db_exec("INSERT INTO quizzes (id, code, creator_name, answers, sets) VALUES (?, ?, ?, ?, ?)",
+                (quiz_id, code, creator_name, json.dumps(answers), json.dumps(sets)))
         db_commit()
         return jsonify({"id": quiz_id, "code": code}), 201
     except Exception as e:
@@ -225,6 +228,7 @@ def get_quiz(code):
         return jsonify({"error": "Quiz not found"}), 404
     quiz = row_to_dict(row)
     quiz["answers"] = json.loads(quiz["answers"])
+    quiz["sets"]    = json.loads(quiz.get("sets") or "[]")
     return jsonify(quiz)
 
 
