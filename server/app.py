@@ -24,9 +24,9 @@ app = Flask(__name__)
 
 # ── CORS ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:4173",
-    "https://friends-hazel.vercel.app",  ← uncomment + fill in after Vercel deploy
+    # "http://localhost:5173",
+    # "http://localhost:4173",
+    "https://friends-hazel.vercel.app",
 ]
 
 CORS(
