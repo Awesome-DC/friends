@@ -3,7 +3,7 @@
 // FriendQuiz v2 — API client for Flask + SQLite backend
 // ─────────────────────────────────────────────────────────────
 
-const BASE = "https://friends-production-c750.up.railway.app";
+const BASE = "https://lucky-curiosity-production.up.railway.app";
 
 async function request(method, path, body) {
   const res = await fetch(`${BASE}${path}`, {
