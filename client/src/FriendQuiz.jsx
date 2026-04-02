@@ -160,17 +160,58 @@ function BackBtn({onClick}) {
 function FQInput({value,onChange,placeholder,onEnter,style={},autoFocus,type="text"}) {
   return <input className="fq-input" type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} onKeyDown={e=>{if(e.key==="Enter"&&onEnter)onEnter();}} style={{marginBottom:14,...style}} autoFocus={autoFocus}/>;
 }
-function PhotoSlide({question,children,index,total}) {
+// Preload all question images as soon as the app loads
+function useImagePreloader() {
+  useEffect(() => {
+    QUESTIONS.forEach(q => {
+      const img = new Image();
+      img.src = q.photo;
+    });
+  }, []);
+}
+
+function PhotoSlide({question, children, index, total}) {
+  const [loaded, setLoaded] = useState(false);
+
+  // Preload next image while user is on current slide
+  useEffect(() => {
+    const next = QUESTIONS[index + 1];
+    if (next) {
+      const img = new Image();
+      img.src = next.photo;
+    }
+  }, [index]);
+
   return (
-    <div style={{position:"relative",height:"100%",width:"100%",overflow:"hidden"}}>
-      <img src={question.photo} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>
+    <div style={{position:"relative",height:"100%",width:"100%",overflow:"hidden",background:"#1a0a3d"}}>
+      {/* Placeholder shown while image loads */}
+      {!loaded && (
+        <div style={{position:"absolute",inset:0,background:`linear-gradient(145deg,#1a0a3d,#2d1458)`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{fontSize:"5rem",opacity:0.3,animation:"pulse 1.5s ease-in-out infinite"}}>{question.emoji}</div>
+        </div>
+      )}
+      {/* Actual photo — fades in when loaded */}
+      <img
+        src={question.photo}
+        alt=""
+        onLoad={() => setLoaded(true)}
+        style={{
+          position:"absolute",inset:0,width:"100%",height:"100%",
+          objectFit:"cover",objectPosition:"center",
+          opacity: loaded ? 1 : 0,
+          transition:"opacity 0.4s ease",
+        }}
+      />
       <div style={{position:"absolute",inset:0,background:question.color}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,transparent 20%,rgba(10,8,28,0.7) 60%,rgba(10,8,28,0.97) 100%)"}}/>
+      {/* Top bar */}
       <div style={{position:"absolute",top:0,left:0,right:0,padding:"20px 24px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",gap:6}}>{Array.from({length:total}).map((_,i)=><span key={i} className={`dot-indicator ${i===index?"active":""}`}/>)}</div>
         <span style={{fontFamily:"'Fredoka One',cursive",fontSize:"0.9rem",color:"rgba(255,255,255,0.75)",background:"rgba(0,0,0,0.3)",backdropFilter:"blur(8px)",padding:"4px 14px",borderRadius:100}}>{index+1} / {total}</span>
       </div>
+      {/* Emoji */}
       <div style={{position:"absolute",top:"18%",left:"50%",transform:"translateX(-50%)",fontSize:"4.5rem",filter:"drop-shadow(0 4px 12px rgba(0,0,0,0.4))",animation:"pulse 3s ease-in-out infinite"}}>{question.emoji}</div>
+      {/* Bottom content */}
       <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"28px 24px 40px",animation:"fadeUp 0.45s ease both"}}>{children}</div>
     </div>
   );
@@ -534,6 +575,7 @@ function ResultsScreen({quiz,playerName,relation,result,onHome}) {
 // ══════════════════════════════════════════════════════════════
 export default function FriendQuiz() {
   const urlCode = useUrlCode();
+  useImagePreloader(); // preload all photos immediately on app start
   const [screen,setScreen]       = useState(()=>urlCode?"loading":"home");
   const [creatorName,setCreatorName] = useState("");
   const [quizMeta,setQuizMeta]   = useState(null);  // {id, code}
