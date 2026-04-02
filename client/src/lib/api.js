@@ -3,7 +3,7 @@
 // FriendQuiz v2 — API client for Flask + SQLite backend
 // ─────────────────────────────────────────────────────────────
 
-const BASE = "http://localhost:3001";
+const BASE = "https://friends-anly.onrender.com";
 
 async function request(method, path, body) {
   const res = await fetch(`${BASE}${path}`, {
