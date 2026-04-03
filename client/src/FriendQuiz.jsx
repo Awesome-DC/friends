@@ -813,6 +813,87 @@ function ResultsScreen({quiz,playerName,relation,result,localAnswers,onHome}) {
   );
 }
 
+
+// ── Creator: pick correct answer for each set ─────────────────────────────
+function AnswerPickerScreen({sets, creatorName, onBack, onDone}) {
+  const [current, setCurrent] = useState(0);
+  const [answers, setAnswers] = useState({});   // { setId: optionLabel }
+  const [chosen, setChosen]   = useState(null); // currently selected on this slide
+
+  const set = sets[current];
+  const total = sets.length;
+  const isLast = current === total - 1;
+
+  function handlePick(label) {
+    if (chosen) return; // already picked
+    setChosen(label);
+    setAnswers(prev => ({ ...prev, [set.id]: label }));
+  }
+
+  function handleNext() {
+    if (!chosen) return;
+    if (!isLast) {
+      setCurrent(c => c + 1);
+      setChosen(null);
+    } else {
+      // Attach correctAnswer to each set
+      const setsWithAnswers = sets.map(s => ({
+        ...s,
+        correctAnswer: answers[s.id] || s.options[0].label,
+      }));
+      onDone(setsWithAnswers);
+    }
+  }
+
+  if (!set) return null;
+
+  return (
+    <PhotoBg photo={set.bgPhoto} color={set.bgColor} index={current} total={total}>
+      {/* Header */}
+      <div style={{position:"absolute",top:"10%",left:0,right:0,textAlign:"center",padding:"0 24px"}}>
+        <p style={{fontFamily:"'Nunito',sans-serif",fontSize:"0.78rem",fontWeight:800,letterSpacing:"2px",textTransform:"uppercase",color:"rgba(255,255,255,0.55)",marginBottom:8}}>
+          Pick YOUR answer
+        </p>
+        <div style={{fontSize:"3rem",marginBottom:8,filter:"drop-shadow(0 4px 12px rgba(0,0,0,0.5))"}}>{set.emoji}</div>
+        <h2 style={{fontFamily:"'Fredoka One',cursive",fontSize:"clamp(1.2rem,4.5vw,1.6rem)",color:"#fff",textShadow:"0 2px 12px rgba(0,0,0,0.6)",lineHeight:1.3}}>
+          {set.question.replace("{name}", "your")}
+        </h2>
+      </div>
+
+      {/* 2x2 option grid */}
+      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 16px 100px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {set.options.map(opt => {
+            let state = "";
+            if (chosen) {
+              if (opt.label === chosen) state = "correct";
+              else state = "wrong";
+            }
+            return (
+              <OptionCard
+                key={opt.label}
+                option={opt}
+                state={state}
+                onClick={() => handlePick(opt.label)}
+                disabled={!!chosen}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Next button — appears after picking */}
+      {chosen && (
+        <div style={{position:"absolute",bottom:24,left:16,right:16,animation:"fadeUp 0.3s ease"}}>
+          <button className="fq-btn fq-btn-primary" onClick={handleNext}>
+            {isLast ? "✅ Done — Add Custom Questions?" : `Next Set →`}
+          </button>
+        </div>
+      )}
+    </PhotoBg>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════
 //  HOME
 // ══════════════════════════════════════════════════════════════
@@ -858,11 +939,11 @@ export default function FriendQuiz() {
   async function handleQuizReady(allSets) {
     setSaving(true);
     try {
-      // Each set needs a correctAnswer field (the creator's own answer = first option by index 0)
-      // We store it alongside the set data
+      // correctAnswer already set by AnswerPickerScreen for presets
+      // and defaults to options[0] for custom questions
       const setsWithAnswers = allSets.map(set => ({
         ...set,
-        correctAnswer: set.options[0].label, // creator's answer is always index 0
+        correctAnswer: set.correctAnswer || set.options[0].label,
       }));
       const answers = {};
       setsWithAnswers.forEach(s => { answers[s.id] = s.correctAnswer; });
@@ -886,7 +967,8 @@ export default function FriendQuiz() {
       {screen==="loading"       && <DarkScreen><p style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.5rem",color:"rgba(255,255,255,0.4)",textAlign:"center"}}>Loading quiz…</p></DarkScreen>}
       {screen==="home"          && <HomeScreen onCreate={()=>go("creator-name")} onTake={()=>go("enter-code")}/>}
       {screen==="creator-name"  && <CreatorNameScreen onBack={()=>go("home")} onNext={name=>{setCreatorName(name);go("set-picker");}}/>}
-      {screen==="set-picker"    && <SetPickerScreen creatorName={creatorName} onBack={()=>go("creator-name")} onDone={sets=>{setPendingSets(sets);go("custom-prompt");}} />}
+      {screen==="set-picker"    && <SetPickerScreen creatorName={creatorName} onBack={()=>go("creator-name")} onDone={sets=>{setPendingSets(sets);go("answer-picker");}} />}
+      {screen==="answer-picker"  && <AnswerPickerScreen sets={pendingSets} creatorName={creatorName} onBack={()=>go("set-picker")} onDone={setsWithAnswers=>{setPendingSets(setsWithAnswers);go("custom-prompt");}}/>}
       {screen==="custom-prompt" && <CustomPromptScreen selectedSets={pendingSets} creatorName={creatorName} onDone={handleQuizReady}/>}
       {screen==="profile-created"&&quizMeta && <ProfileCreatedScreen creatorName={creatorName} quizCode={quizMeta.code} onViewDashboard={()=>go("dashboard")}/>}
       {screen==="dashboard"     &&quizMeta  && <DashboardScreen creatorName={creatorName} quizCode={quizMeta.code} quizId={quizMeta.id} onHome={()=>go("home")}/>}
