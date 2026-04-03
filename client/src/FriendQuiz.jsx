@@ -407,6 +407,11 @@ function CustomPromptScreen({selectedSets,creatorName,onDone}) {
   const [showModal,setShowModal]=useState(false);
   const [askAgain,setAskAgain]=useState(false);
   const MAX_CUSTOM=2;
+  // Keep a ref of selectedSets so finalize never uses stale closure
+  const selectedRef = useRef(selectedSets);
+  useEffect(()=>{ selectedRef.current = selectedSets; },[selectedSets]);
+
+  console.log("[CustomPromptScreen] selectedSets:", selectedSets?.length, selectedSets?.map(s=>s.id));
 
   function handleAdd(newSet) {
     const updated=[...customSets,newSet];
@@ -417,9 +422,11 @@ function CustomPromptScreen({selectedSets,creatorName,onDone}) {
   }
 
   function finalize(custom=customSets) {
+    const base = selectedRef.current || selectedSets || [];
+    console.log("[finalize] base sets:", base?.length, "custom:", custom?.length);
     setAskAgain(false);
     setShowModal(false);
-    onDone([...selectedSets,...custom]);
+    onDone([...base,...custom]);
   }
 
   return (
@@ -955,27 +962,38 @@ export default function FriendQuiz() {
   // Called when creator finishes picking sets + custom questions
   async function handleQuizReady(allSets) {
     setSaving(true);
-    console.log("[handleQuizReady] allSets received:", allSets?.length, allSets?.map(s=>s.id));
+    console.log("[handleQuizReady] allSets count:", allSets?.length);
+    console.log("[handleQuizReady] allSets ids:", JSON.stringify(allSets?.map(s=>s.id)));
     try {
-      // correctAnswer already set by AnswerPickerScreen for presets
-      // and defaults to options[0] for custom questions
+      if (!allSets || allSets.length === 0) {
+        alert("Error: No sets selected. Please go back and pick your questions.");
+        setSaving(false);
+        return;
+      }
       const setsWithAnswers = allSets.map(set => ({
-        ...set,
-        correctAnswer: set.correctAnswer || set.options[0].label,
+        id: set.id,
+        label: set.label,
+        emoji: set.emoji,
+        question: set.question,
+        bgPhoto: set.bgPhoto,
+        bgColor: set.bgColor,
+        options: set.options,
+        correctAnswer: set.correctAnswer || (set.options && set.options[0]?.label) || "",
+        isCustom: set.isCustom || false,
       }));
       const answers = {};
       setsWithAnswers.forEach(s => { answers[s.id] = s.correctAnswer; });
-      console.log("[handleQuizReady] sending sets:", setsWithAnswers?.length);
-      const result = await createQuiz({
-        creatorName,
-        answers,
-        sets: setsWithAnswers,
-      });
-      console.log("[handleQuizReady] server response:", result);
+      console.log("[handleQuizReady] setsWithAnswers count:", setsWithAnswers.length);
+      console.log("[handleQuizReady] answers:", JSON.stringify(answers));
+      const payload = { creatorName, answers, sets: setsWithAnswers };
+      console.log("[handleQuizReady] payload sets count:", payload.sets.length);
+      const result = await createQuiz(payload);
+      console.log("[handleQuizReady] server response:", JSON.stringify(result));
       const { id, code } = result;
       setQuizMeta({ id, code });
       go("profile-created");
     } catch(e) {
+      console.error("[handleQuizReady] error:", e);
       alert("Error saving quiz: " + e.message);
     } finally { setSaving(false); }
   }
@@ -991,7 +1009,7 @@ export default function FriendQuiz() {
       {screen==="creator-name"  && <CreatorNameScreen onBack={()=>go("home")} onNext={name=>{setCreatorName(name);go("set-picker");}}/>}
       {screen==="set-picker"    && <SetPickerScreen creatorName={creatorName} onBack={()=>go("creator-name")} onDone={sets=>{setPendingSets(sets);go("answer-picker");}} />}
       {screen==="answer-picker"  && <AnswerPickerScreen sets={pendingSets} creatorName={creatorName} onBack={()=>go("set-picker")} onDone={setsWithAnswers=>{pendingSetsRef.current=setsWithAnswers;setPendingSets(setsWithAnswers);go("custom-prompt");}}/>}
-      {screen==="custom-prompt" && <CustomPromptScreen selectedSets={pendingSetsRef.current.length>0?pendingSetsRef.current:pendingSets} creatorName={creatorName} onDone={handleQuizReady}/>}
+      {screen==="custom-prompt" && <CustomPromptScreen selectedSets={pendingSetsRef.current} creatorName={creatorName} onDone={handleQuizReady}/>}
       {screen==="profile-created"&&quizMeta && <ProfileCreatedScreen creatorName={creatorName} quizCode={quizMeta.code} onViewDashboard={()=>go("dashboard")}/>}
       {screen==="dashboard"     &&quizMeta  && <DashboardScreen creatorName={creatorName} quizCode={quizMeta.code} quizId={quizMeta.id} onHome={()=>go("home")}/>}
       {screen==="enter-code"    && <EnterCodeScreen onBack={()=>go("home")} onLoad={quiz=>{setActiveQuiz(quiz);go("welcome");}}/>}
