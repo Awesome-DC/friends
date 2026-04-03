@@ -633,6 +633,7 @@ function EnterCodeScreen({onBack,onLoad}) {
 }
 
 function WelcomeScreen({quiz,onNext}) {
+  const hasSets = quiz.sets && quiz.sets.length > 0;
   return (
     <DarkScreen>
       <div style={{textAlign:"center",marginBottom:24}}>
@@ -642,7 +643,14 @@ function WelcomeScreen({quiz,onNext}) {
         <p style={{fontFamily:"'Fredoka One',cursive",fontSize:"2rem",background:`linear-gradient(135deg,#a78bfa,${C.pink})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",margin:"6px 0"}}>{quiz.creator_name}'s</p>
         <p style={{fontFamily:"'Nunito',sans-serif",color:"rgba(255,255,255,0.6)",fontSize:"1rem"}}>Friendship Profile Quiz!</p>
       </div>
-      <button className="fq-btn fq-btn-primary" onClick={onNext} style={{fontSize:"1.1rem",padding:"18px"}}>Let's do this! 🎯</button>
+      {!hasSets ? (
+        <div style={{background:"rgba(239,68,68,0.15)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:16,padding:"16px",textAlign:"center",marginBottom:16}}>
+          <p style={{fontFamily:"'Nunito',sans-serif",color:"#f87171",fontWeight:700,marginBottom:6}}>⚠️ This quiz has no questions yet</p>
+          <p style={{fontFamily:"'Nunito',sans-serif",color:"rgba(255,255,255,0.5)",fontSize:"0.85rem"}}>The creator needs to recreate their quiz — this one was made before questions were added.</p>
+        </div>
+      ) : (
+        <button className="fq-btn fq-btn-primary" onClick={onNext} style={{fontSize:"1.1rem",padding:"18px"}}>Let's do this! 🎯</button>
+      )}
     </DarkScreen>
   );
 }
@@ -675,7 +683,7 @@ function PlayerReadyScreen({playerName,quiz,onStart}) {
         <div style={{fontSize:"4rem",marginBottom:14,animation:"pulse 2s ease-in-out infinite"}}>🎮</div>
         <Logo text={`Ready, ${playerName}?`} size="2rem"/>
         <p style={{fontFamily:"'Nunito',sans-serif",color:"rgba(255,255,255,0.6)",lineHeight:1.7,margin:"12px 0 32px"}}>
-          You'll answer <strong style={{color:"#fff"}}>{sets.length} questions</strong> about <strong style={{color:"#fff"}}>{quiz.creator_name}</strong>.<br/>
+          You'll answer <strong style={{color:"#fff"}}>{(quiz.sets||[]).length} questions</strong> about <strong style={{color:"#fff"}}>{quiz.creator_name}</strong>.<br/>
           Tap the correct photo — your score gets sent to them!
         </p>
         <button className="fq-btn fq-btn-primary" onClick={onStart} style={{fontSize:"1.15rem",padding:"20px"}}>🚀 Press Start to Begin</button>
