@@ -24,8 +24,6 @@ app = Flask(__name__)
 
 # ── CORS ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
-    # "http://localhost:5173",
-    # "http://localhost:4173",
     "https://friends-hazel.vercel.app",
 ]
 
@@ -144,6 +142,13 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_notifs_quiz  ON notifications(quiz_id);
         """)
         conn.commit(); cur.close(); conn.close()
+        # Add sets column if it doesn't exist (safe migration)
+        try:
+            cur.execute("ALTER TABLE quizzes ADD COLUMN sets TEXT NOT NULL DEFAULT '[]'")
+            conn.commit()
+            print("✅ Migrated: added sets column")
+        except Exception:
+            conn.rollback()  # column already exists, ignore
         print("✅ Postgres tables ready")
     else:
         db = sqlite3.connect(DB_PATH)
@@ -179,6 +184,13 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_notifs_quiz  ON notifications(quiz_id);
         """)
         db.commit(); db.close()
+        # Add sets column if it doesn't exist (safe migration)
+        try:
+            db.execute("ALTER TABLE quizzes ADD COLUMN sets TEXT NOT NULL DEFAULT '[]'")
+            db.commit()
+            print("✅ Migrated: added sets column")
+        except Exception:
+            pass  # column already exists, ignore
         print("✅ SQLite database ready (friendquiz.db)")
 
 
