@@ -38,7 +38,7 @@ function getScoreMessage(pct) {
 // ── Global CSS ─────────────────────────────────────────────────────────────
 const globalCSS = `
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-html, body { height:100%; overflow:hidden; background:${C.dark}; }
+html, body { height:100%; background:${C.dark}; }
 #root { height:100%; }
 
 @keyframes fadeUp   { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
@@ -90,12 +90,12 @@ html, body { height:100%; overflow:hidden; background:${C.dark}; }
 
 /* Option cards */
 .option-card {
-  position:relative; border-radius:20px; overflow:hidden; cursor:pointer;
+  position:relative; border-radius:16px; overflow:hidden; cursor:pointer;
   border:3px solid transparent; transition:border 0.2s,transform 0.15s,box-shadow 0.15s;
-  aspect-ratio:1/1.1;
+  height: clamp(120px, 22vh, 200px);
 }
-.option-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,0.4); }
-.option-card.selected { border-color:${C.yellow}; transform:scale(1.04); box-shadow:0 0 0 4px rgba(245,158,11,0.3); }
+.option-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+.option-card.selected { border-color:${C.yellow}; transform:scale(1.03); box-shadow:0 0 0 4px rgba(245,158,11,0.3); }
 .option-card.correct  { border-color:${C.green};  box-shadow:0 0 0 4px rgba(16,185,129,0.3); }
 .option-card.wrong    { border-color:#ef4444;     box-shadow:0 0 0 4px rgba(239,68,68,0.3); opacity:0.7; }
 
@@ -184,17 +184,21 @@ function BackBtn({onClick}) {
 function PhotoBg({photo,color,children,index,total}) {
   const [loaded,setLoaded]=useState(false);
   return (
-    <div style={{position:"relative",height:"100%",width:"100%",overflow:"hidden",background:"#1a0a3d"}}>
-      {!loaded&&<div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#1a0a3d,#2d1458)"}}/>}
-      <img src={photo} alt="" onLoad={()=>setLoaded(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center",opacity:loaded?1:0,transition:"opacity 0.4s ease"}}/>
-      <div style={{position:"absolute",inset:0,background:color}}/>
-      <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(0,0,0,0.2) 0%,rgba(10,8,28,0.6) 50%,rgba(10,8,28,0.98) 100%)"}}/>
-      {/* Dots */}
-      {total&&<div style={{position:"absolute",top:0,left:0,right:0,padding:"20px 24px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{position:"relative",width:"100%",height:"100%",minHeight:0,overflow:"hidden",background:"#1a0a3d",display:"flex",flexDirection:"column"}}>
+      {/* Background layers */}
+      {!loaded&&<div style={{position:"absolute",inset:0,background:"linear-gradient(145deg,#1a0a3d,#2d1458)",zIndex:0}}/>}
+      <img src={photo} alt="" onLoad={()=>setLoaded(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top",opacity:loaded?1:0,transition:"opacity 0.4s ease",zIndex:0}}/>
+      <div style={{position:"absolute",inset:0,background:color,zIndex:1}}/>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(0,0,0,0.15) 0%,rgba(10,8,28,0.55) 40%,rgba(10,8,28,0.97) 100%)",zIndex:1}}/>
+      {/* Dots bar */}
+      {total&&<div style={{position:"relative",zIndex:10,padding:"16px 20px 8px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
         <div style={{display:"flex",gap:6}}>{Array.from({length:total}).map((_,i)=><span key={i} className={`dot-indicator ${i===index?"active":""}`}/>)}</div>
-        <span style={{fontFamily:"'Fredoka One',cursive",fontSize:"0.9rem",color:"rgba(255,255,255,0.75)",background:"rgba(0,0,0,0.3)",backdropFilter:"blur(8px)",padding:"4px 14px",borderRadius:100}}>{index+1} / {total}</span>
+        <span style={{fontFamily:"'Fredoka One',cursive",fontSize:"0.85rem",color:"rgba(255,255,255,0.75)",background:"rgba(0,0,0,0.3)",backdropFilter:"blur(8px)",padding:"3px 12px",borderRadius:100}}>{index+1} / {total}</span>
       </div>}
-      {children}
+      {/* Content */}
+      <div style={{position:"relative",zIndex:10,flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -736,27 +740,31 @@ function PlayScreen({quiz,playerName,relation,onFinish}) {
 
   return (
     <PhotoBg photo={set.bgPhoto} color={set.bgColor} index={current} total={sets.length}>
-      {/* Question */}
-      <div style={{position:"absolute",top:"12%",left:0,right:0,textAlign:"center",padding:"0 24px"}}>
-        <div style={{fontSize:"3rem",marginBottom:8,filter:"drop-shadow(0 4px 12px rgba(0,0,0,0.5))",animation:"pulse 3s ease-in-out infinite"}}>{set.emoji}</div>
-        <h2 style={{fontFamily:"'Fredoka One',cursive",fontSize:"clamp(1.2rem,4.5vw,1.6rem)",color:"#fff",textShadow:"0 2px 12px rgba(0,0,0,0.6)",lineHeight:1.3}}>
-          {set.question.replace("{name}",quiz.creator_name)}
-        </h2>
-      </div>
+      {/* Full layout wrapper — flex column so content fits any screen */}
+      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"0 16px 20px"}}>
+        {/* Question area — top portion */}
+        <div style={{textAlign:"center",padding:"60px 8px 12px",flex:"0 0 auto"}}>
+          <div style={{fontSize:"clamp(2rem,5vw,3rem)",marginBottom:6,filter:"drop-shadow(0 4px 12px rgba(0,0,0,0.5))",animation:"pulse 3s ease-in-out infinite"}}>{set.emoji}</div>
+          <h2 style={{fontFamily:"'Fredoka One',cursive",fontSize:"clamp(1rem,3.5vw,1.5rem)",color:"#fff",textShadow:"0 2px 12px rgba(0,0,0,0.6)",lineHeight:1.3,maxWidth:600,margin:"0 auto"}}>
+            {set.question.replace("{name}",quiz.creator_name)}
+          </h2>
+        </div>
 
-      {/* 2x2 option grid */}
-      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 16px 24px"}}>
-        {submitting&&<p style={{fontFamily:"'Nunito',sans-serif",color:"rgba(255,255,255,0.7)",textAlign:"center",marginBottom:8,fontSize:"0.88rem"}}>Submitting…</p>}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          {(set.options||[]).map(opt=>(
-            <OptionCard
-              key={opt.label}
-              option={opt}
-              state={revealed?getCardState(opt.label):""}
-              onClick={()=>handleSelect(opt.label)}
-              disabled={revealed||submitting}
-            />
-          ))}
+        {/* 2x2 option grid — bottom portion, constrained */}
+        <div style={{flex:"0 0 auto",maxWidth:560,width:"100%",margin:"0 auto"}}>
+          {submitting&&<p style={{fontFamily:"'Nunito',sans-serif",color:"rgba(255,255,255,0.7)",textAlign:"center",marginBottom:8,fontSize:"0.88rem"}}>Submitting…</p>}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {(set.options||[]).map(opt=>(
+              <div key={opt.label} style={{height:"clamp(110px,20vh,200px)"}}>
+                <OptionCard
+                  option={opt}
+                  state={revealed?getCardState(opt.label):""}
+                  onClick={()=>handleSelect(opt.label)}
+                  disabled={revealed||submitting}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </PhotoBg>
@@ -849,47 +857,47 @@ function AnswerPickerScreen({sets, creatorName, onBack, onDone}) {
 
   return (
     <PhotoBg photo={set.bgPhoto} color={set.bgColor} index={current} total={total}>
-      {/* Header */}
-      <div style={{position:"absolute",top:"10%",left:0,right:0,textAlign:"center",padding:"0 24px"}}>
-        <p style={{fontFamily:"'Nunito',sans-serif",fontSize:"0.78rem",fontWeight:800,letterSpacing:"2px",textTransform:"uppercase",color:"rgba(255,255,255,0.55)",marginBottom:8}}>
-          Pick YOUR answer
-        </p>
-        <div style={{fontSize:"3rem",marginBottom:8,filter:"drop-shadow(0 4px 12px rgba(0,0,0,0.5))"}}>{set.emoji}</div>
-        <h2 style={{fontFamily:"'Fredoka One',cursive",fontSize:"clamp(1.2rem,4.5vw,1.6rem)",color:"#fff",textShadow:"0 2px 12px rgba(0,0,0,0.6)",lineHeight:1.3}}>
-          {set.question.replace("{name}", "your")}
-        </h2>
-      </div>
+      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"0 16px 20px"}}>
+        {/* Question area */}
+        <div style={{textAlign:"center",padding:"60px 8px 10px",flex:"0 0 auto"}}>
+          <p style={{fontFamily:"'Nunito',sans-serif",fontSize:"0.75rem",fontWeight:800,letterSpacing:"2px",textTransform:"uppercase",color:"rgba(255,255,255,0.55)",marginBottom:6}}>
+            Pick YOUR answer
+          </p>
+          <div style={{fontSize:"clamp(2rem,5vw,3rem)",marginBottom:6,filter:"drop-shadow(0 4px 12px rgba(0,0,0,0.5))"}}>{set.emoji}</div>
+          <h2 style={{fontFamily:"'Fredoka One',cursive",fontSize:"clamp(1rem,3.5vw,1.5rem)",color:"#fff",textShadow:"0 2px 12px rgba(0,0,0,0.6)",lineHeight:1.3,maxWidth:600,margin:"0 auto"}}>
+            {set.question.replace("{name}", "your")}
+          </h2>
+        </div>
 
-      {/* 2x2 option grid */}
-      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 16px 100px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          {set.options.map(opt => {
-            let state = "";
-            if (chosen) {
-              if (opt.label === chosen) state = "correct";
-              else state = "wrong";
-            }
-            return (
-              <OptionCard
-                key={opt.label}
-                option={opt}
-                state={state}
-                onClick={() => handlePick(opt.label)}
-                disabled={!!chosen}
-              />
-            );
-          })}
+        {/* Options + Next button */}
+        <div style={{flex:"0 0 auto",maxWidth:560,width:"100%",margin:"0 auto"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:chosen?10:0}}>
+            {set.options.map(opt => {
+              let state = "";
+              if (chosen) {
+                if (opt.label === chosen) state = "correct";
+                else state = "wrong";
+              }
+              return (
+                <OptionCard
+                  key={opt.label}
+                  option={opt}
+                  state={state}
+                  onClick={() => handlePick(opt.label)}
+                  disabled={!!chosen}
+                />
+              );
+            })}
+          </div>
+          {chosen && (
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+              <button className="fq-btn fq-btn-primary" onClick={handleNext}>
+                {isLast ? "✅ Done — Add Custom Questions?" : `Next Set →`}
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Next button — appears after picking */}
-      {chosen && (
-        <div style={{position:"absolute",bottom:24,left:16,right:16,animation:"fadeUp 0.3s ease"}}>
-          <button className="fq-btn fq-btn-primary" onClick={handleNext}>
-            {isLast ? "✅ Done — Add Custom Questions?" : `Next Set →`}
-          </button>
-        </div>
-      )}
     </PhotoBg>
   );
 }
@@ -960,7 +968,8 @@ export default function FriendQuiz() {
   }
 
   return (
-    <div style={{height:"100%"}}>
+    <div style={{height:"100%",display:"flex",justifyContent:"center",background:C.dark}}>
+      <div style={{width:"100%",maxWidth:"480px",height:"100%",position:"relative",overflow:"hidden"}}>
       <InjectStyles/>
       {saving&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center"}}><p style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.5rem",color:"#fff"}}>Creating your quiz… 🎉</p></div>}
 
@@ -978,6 +987,7 @@ export default function FriendQuiz() {
       {screen==="player-ready"  &&activeQuiz && <PlayerReadyScreen playerName={playerName} quiz={activeQuiz} onStart={()=>go("play")}/>}
       {screen==="play"          &&activeQuiz && <PlayScreen quiz={activeQuiz} playerName={playerName} relation={relation} onFinish={(result,answers)=>{setFinalResult(result);setLocalAnswers(answers);go("results");}}/>}
       {screen==="results"       &&activeQuiz&&finalResult && <ResultsScreen quiz={activeQuiz} playerName={playerName} relation={relation} result={finalResult} localAnswers={localAnswers} onHome={()=>{go("home");setActiveQuiz(null);setFinalResult(null);}}/>}
+      </div>
     </div>
   );
 }
