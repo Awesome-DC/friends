@@ -248,8 +248,18 @@ def get_quiz(code):
     if row is None:
         return jsonify({"error": "Quiz not found"}), 404
     quiz = row_to_dict(row)
-    quiz["answers"] = json.loads(quiz["answers"])
-    quiz["sets"]    = json.loads(quiz.get("sets") or "[]")
+    # Safely parse JSON fields — handle None, empty string, and bad JSON
+    try:
+        quiz["answers"] = json.loads(quiz["answers"] or "{}")
+    except Exception:
+        quiz["answers"] = {}
+    try:
+        raw_sets = quiz.get("sets") or "[]"
+        quiz["sets"] = json.loads(raw_sets) if raw_sets else []
+    except Exception:
+        quiz["sets"] = []
+    # Log for debugging
+    print(f"[get_quiz] code={code} sets_count={len(quiz['sets'])} answers_keys={list(quiz['answers'].keys())}")
     return jsonify(quiz)
 
 
@@ -344,6 +354,24 @@ def mark_read(quiz_id):
 @app.get("/health")
 def health():
     return jsonify({"status": "ok"})
+
+
+@app.get("/debug/quiz/<code>")
+def debug_quiz(code):
+    """Debug endpoint — shows raw DB values for a quiz."""
+    row = db_exec("SELECT id, code, creator_name, sets, answers FROM quizzes WHERE code = ?",
+                  (code.lower().strip(),), fetchone=True)
+    if row is None:
+        return jsonify({"error": "not found"}), 404
+    r = row_to_dict(row)
+    return jsonify({
+        "id": r["id"],
+        "code": r["code"],
+        "creator_name": r["creator_name"],
+        "sets_raw": r.get("sets"),
+        "sets_length": len(json.loads(r.get("sets") or "[]")),
+        "answers_raw": r.get("answers"),
+    })
 
 
 # ── Run ───────────────────────────────────────────────────────
