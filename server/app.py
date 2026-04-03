@@ -24,7 +24,9 @@ app = Flask(__name__)
 
 # ── CORS ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
-    "https://friends-hazel.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:4173",
+    # "https://your-app.vercel.app",  ← uncomment + fill in after Vercel deploy
 ]
 
 CORS(
@@ -232,12 +234,15 @@ def create_quiz():
     sets    = data.get("sets", [])
     quiz_id = str(uuid.uuid4())
     code    = make_code()
+    # Debug log
+    print(f"[create_quiz] creator={creator_name} sets_count={len(sets)} answers_keys={list(answers.keys()) if answers else []}")
     try:
         db_exec("INSERT INTO quizzes (id, code, creator_name, answers, sets) VALUES (?, ?, ?, ?, ?)",
                 (quiz_id, code, creator_name, json.dumps(answers), json.dumps(sets)))
         db_commit()
-        return jsonify({"id": quiz_id, "code": code}), 201
+        return jsonify({"id": quiz_id, "code": code, "sets_count": len(sets)}), 201
     except Exception as e:
+        print(f"[create_quiz] ERROR: {e}")
         return jsonify({"error": str(e)}), 500
 
 
