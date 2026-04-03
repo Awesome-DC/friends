@@ -24,7 +24,9 @@ app = Flask(__name__)
 
 # ── CORS ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
-    "https://friends-hazel.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:4173",
+    # "https://your-app.vercel.app",  ← uncomment + fill in after Vercel deploy
 ]
 
 CORS(
@@ -115,8 +117,8 @@ def init_db():
                 id           TEXT PRIMARY KEY,
                 code         TEXT UNIQUE NOT NULL,
                 creator_name TEXT NOT NULL,
-                answers      TEXT NOT NULL,
-                sets         TEXT NOT NULL DEFAULT '[]',
+                answers      TEXT NOT NULL DEFAULT '{}',
+                sets         TEXT DEFAULT '[]',
                 created_at   TIMESTAMPTZ DEFAULT now()
             );
             CREATE TABLE IF NOT EXISTS quiz_results (
@@ -141,14 +143,22 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_results_quiz ON quiz_results(quiz_id);
             CREATE INDEX IF NOT EXISTS idx_notifs_quiz  ON notifications(quiz_id);
         """)
-        conn.commit(); cur.close(); conn.close()
-        # Add sets column if it doesn't exist (safe migration)
+        conn.commit()
+        cur.close()
+        conn.close()
+        # Safe migration: add sets column to existing DBs using a fresh connection
+        conn2 = psycopg2.connect(DATABASE_URL)
         try:
-            cur.execute("ALTER TABLE quizzes ADD COLUMN sets TEXT NOT NULL DEFAULT '[]'")
-            conn.commit()
-            print("✅ Migrated: added sets column")
-        except Exception:
-            conn.rollback()  # column already exists, ignore
+            cur2 = conn2.cursor()
+            cur2.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS sets TEXT DEFAULT '[]'")
+            conn2.commit()
+            print("✅ sets column ensured")
+        except Exception as e:
+            conn2.rollback()
+            print(f"Migration note: {e}")
+        finally:
+            cur2.close()
+            conn2.close()
         print("✅ Postgres tables ready")
     else:
         db = sqlite3.connect(DB_PATH)
@@ -157,8 +167,8 @@ def init_db():
                 id           TEXT PRIMARY KEY,
                 code         TEXT UNIQUE NOT NULL,
                 creator_name TEXT NOT NULL,
-                answers      TEXT NOT NULL,
-                sets         TEXT NOT NULL DEFAULT '[]',
+                answers      TEXT NOT NULL DEFAULT '{}',
+                sets         TEXT DEFAULT '[]',
                 created_at   TEXT DEFAULT (datetime('now'))
             );
             CREATE TABLE IF NOT EXISTS quiz_results (
@@ -183,14 +193,15 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_results_quiz ON quiz_results(quiz_id);
             CREATE INDEX IF NOT EXISTS idx_notifs_quiz  ON notifications(quiz_id);
         """)
-        db.commit(); db.close()
-        # Add sets column if it doesn't exist (safe migration)
+        db.commit()
+        # Safe migration for existing SQLite DBs
         try:
-            db.execute("ALTER TABLE quizzes ADD COLUMN sets TEXT NOT NULL DEFAULT '[]'")
+            db.execute("ALTER TABLE quizzes ADD COLUMN sets TEXT DEFAULT '[]'")
             db.commit()
-            print("✅ Migrated: added sets column")
+            print("✅ SQLite sets column added")
         except Exception:
-            pass  # column already exists, ignore
+            pass  # column already exists
+        db.close()
         print("✅ SQLite database ready (friendquiz.db)")
 
 
