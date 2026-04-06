@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { RELATIONS } from "./lib/questions";
-import { PRESET_SETS, getUnsplashPhoto } from "./lib/presets";
+import { PRESET_SETS, getPhotoForKeyword } from "./lib/presets";
 import { createQuiz, getQuizByCode, saveResult, getResultsForQuiz, loginCreator } from "./lib/api";
 import { useNotifications } from "./hooks/useNotifications";
 
@@ -355,17 +355,16 @@ function CustomQuestionModal({onAdd,onSkip,count,max}) {
 
   async function handleAdd() {
     setLoading(true);
-    // Auto-assign Unsplash photos for each option
     const withPhotos=options.map(label=>({
       label:label.trim(),
-      photo:getUnsplashPhoto(label.trim()),
+      photo:getPhotoForKeyword(label.trim()),
     }));
     onAdd({
       id:`custom_${Date.now()}`,
       label:question.trim(),
       emoji:"⭐",
       question:`What is {name}'s ${question.trim().toLowerCase()}?`,
-      bgPhoto:getUnsplashPhoto(question.trim()),
+      bgPhoto:getPhotoForKeyword(question.trim()),
       bgColor:"rgba(60,20,80,0.5)",
       options:withPhotos,
       isCustom:true,
