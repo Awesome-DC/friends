@@ -12,7 +12,7 @@ app = Flask(__name__)
 ALLOWED_ORIGINS = [
     # "http://localhost:5173",
     # "http://localhost:4173",
-    "https://friends.hazel.vercel.app",
+    "https://friends-hazel.vercel.app",
 ]
 
 CORS(
