@@ -24,7 +24,8 @@ app = Flask(__name__)
 
 # ── CORS ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
-    "https://friends-hazel.vercel.app",
+    "http://friens-hazel.vercel.app",
+    # "https://your-app.vercel.app",
 ]
 
 CORS(
@@ -83,12 +84,28 @@ def close_db(error=None):
 
 
 def db_exec(sql, params=(), fetchone=False, fetchall=False):
-    """Unified query runner — swaps ? to %s for Postgres automatically."""
+    """Unified query runner — swaps ? to %s for Postgres automatically.
+    Only replaces ? that are actual placeholders (not inside strings).
+    """
     db = get_db()
     if USE_POSTGRES:
-        sql = sql.replace("?", "%s")
+        # Replace only standalone ? placeholders, not ? inside strings
+        # We do this by counting params and replacing exactly that many ?
+        pg_sql = sql
+        count = len(params)
+        result = []
+        placeholder_n = 0
+        i = 0
+        while i < len(pg_sql):
+            if pg_sql[i] == "?" and placeholder_n < count:
+                result.append("%s")
+                placeholder_n += 1
+            else:
+                result.append(pg_sql[i])
+            i += 1
+        pg_sql = "".join(result)
         cur = db.cursor()
-        cur.execute(sql, params)
+        cur.execute(pg_sql, params)
         if fetchone:  return cur.fetchone()
         if fetchall:  return cur.fetchall()
         return cur
@@ -233,12 +250,20 @@ def create_quiz():
     quiz_id = str(uuid.uuid4())
     code    = make_code()
     # Debug log
-    print(f"[create_quiz] creator={creator_name} sets_count={len(sets)} answers_keys={list(answers.keys()) if answers else []}")
+    sets_json = json.dumps(sets)
+    answers_json = json.dumps(answers)
+    print(f"[create_quiz] creator={creator_name} sets_count={len(sets)} sets_json_len={len(sets_json)}")
     try:
-        db_exec("INSERT INTO quizzes (id, code, creator_name, answers, sets) VALUES (?, ?, ?, ?, ?)",
-                (quiz_id, code, creator_name, json.dumps(answers), json.dumps(sets)))
+        db_exec(
+            "INSERT INTO quizzes (id, code, creator_name, answers, sets) VALUES (?, ?, ?, ?, ?)",
+            (quiz_id, code, creator_name, answers_json, sets_json)
+        )
         db_commit()
-        return jsonify({"id": quiz_id, "code": code, "sets_count": len(sets)}), 201
+        # Verify what was actually saved
+        saved = db_exec("SELECT sets FROM quizzes WHERE id = ?", (quiz_id,), fetchone=True)
+        saved_sets = json.loads(dict(saved).get("sets") or "[]") if saved else []
+        print(f"[create_quiz] VERIFIED saved sets_count={len(saved_sets)}")
+        return jsonify({"id": quiz_id, "code": code, "sets_count": len(saved_sets)}), 201
     except Exception as e:
         print(f"[create_quiz] ERROR: {e}")
         return jsonify({"error": str(e)}), 500
