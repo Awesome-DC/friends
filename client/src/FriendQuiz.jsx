@@ -251,7 +251,7 @@ function ShareButtons({url,creatorName,score,pct}) {
         </button>
       </div>
       <button className="share-btn share-copy" onClick={copyLink}>
-        {copied ? "✅ Copied!" : `🔗 share ${creatorname} link`}
+        {copied ? "✅ Copied!" : `🔗 share ${creatorName} link`}
       </button>
     </div>
   );
