@@ -1,9 +1,3 @@
-// client/src/lib/presets.js
-// ─────────────────────────────────────────────────────────────
-// Preset question banks — each has a question + 4 options with photos
-// Photos are from Unsplash (free, no API key needed)
-// ─────────────────────────────────────────────────────────────
-
 export const PRESET_SETS = [
   {
     id: "drink",
@@ -119,10 +113,56 @@ export const PRESET_SETS = [
   },
 ];
 
-// Unsplash search URL builder for custom question options
-// Used when creator adds a custom option — we auto-fetch a relevant photo
+// Photo URL builder for custom question options
+// Uses Picsum for reliable placeholder photos since Unsplash source API is deprecated
+// We use a hash of the query to get a consistent but varied image per keyword
 export function getUnsplashPhoto(query) {
-  // Use Unsplash source API — returns a relevant photo for the keyword, no API key needed
-  const encoded = encodeURIComponent(query.toLowerCase().trim());
-  return `https://source.unsplash.com/600x800/?${encoded}`;
+  // Generate a consistent number from the query string for a stable image
+  const str = query.toLowerCase().trim();
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const seed = Math.abs(hash) % 1000;
+  return `https://picsum.photos/seed/${seed}/600/800`;
+}
+
+// Better option — keyword-based Unsplash URLs using their CDN (direct image links)
+// These are pre-curated working image IDs per common keywords
+const KEYWORD_PHOTOS = {
+  iphone:   "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600&q=75",
+  samsung:  "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=600&q=75",
+  redmi:    "https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=600&q=75",
+  oppo:     "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600&q=75",
+  tecno:    "https://images.unsplash.com/photo-1567581935884-3349723552ca?w=600&q=75",
+  honda:    "https://images.unsplash.com/photo-1590362891991-f776e747a588?w=600&q=75",
+  toyota:   "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=600&q=75",
+  benz:     "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=600&q=75",
+  bmw:      "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=75",
+  lexus:    "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=600&q=75",
+  car:      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&q=75",
+  phone:    "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=600&q=75",
+  food:     "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=75",
+  music:    "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=75",
+  movie:    "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&q=75",
+  sport:    "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&q=75",
+  default:  "https://images.unsplash.com/photo-1557683311-eac922347aa1?w=600&q=75",
+};
+
+export function getPhotoForKeyword(keyword) {
+  const key = keyword.toLowerCase().trim();
+  // Check exact match first
+  if (KEYWORD_PHOTOS[key]) return KEYWORD_PHOTOS[key];
+  // Check partial match
+  for (const [k, url] of Object.entries(KEYWORD_PHOTOS)) {
+    if (key.includes(k) || k.includes(key)) return url;
+  }
+  // Fallback to picsum with consistent seed
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) - hash) + key.charCodeAt(i);
+    hash |= 0;
+  }
+  return `https://picsum.photos/seed/${Math.abs(hash) % 1000}/600/800`;
 }
