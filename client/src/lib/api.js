@@ -6,55 +6,42 @@
 const BASE = "https://lucky-curiosity-production.up.railway.app";
 
 async function request(method, path, body) {
+  const bodyStr = body ? JSON.stringify(body) : undefined;
+  if (path === "/quizzes" && method === "POST") {
+    console.log("[api.js] createQuiz raw body length:", bodyStr?.length);
+    const parsed = bodyStr ? JSON.parse(bodyStr) : {};
+    console.log("[api.js] createQuiz parsed sets count:", parsed.sets?.length);
+    console.log("[api.js] createQuiz parsed sets ids:", parsed.sets?.map(s=>s.id));
+  }
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: { "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
+    body: bodyStr,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Request failed");
   return data;
 }
 
-// ── Quizzes ──────────────────────────────────────────────────
+export const createQuiz        = ({ creatorName, answers, sets }) => {
+  console.log("[api.js] createQuiz called, sets:", sets?.length, sets?.map(s=>s.id));
+  return request("POST", "/quizzes", { creatorName, answers, sets });
+};
 
-// Create a quiz → returns { id, code }
-export async function createQuiz({ creatorName, answers }) {
-  return request("POST", "/quizzes", { creatorName, answers });
-}
+export const getQuizByCode     = (code) =>
+  request("GET", `/quizzes/${code}`);
 
-// Load quiz by share code
-export async function getQuizByCode(code) {
-  return request("GET", `/quizzes/${code}`);
-}
+export const saveResult        = ({ quizId, playerName, relation, answers }) =>
+  request("POST", "/results", { quizId, playerName, relation, answers });
 
-// ── Results ──────────────────────────────────────────────────
+export const getResultsForQuiz = (quizId) =>
+  request("GET", `/results/${quizId}`);
 
-// Save player answers → backend scores with fuzzy match
-// answers = [{ key, question, given }]
-// returns { id, score, total, percentage, scored }
-export async function saveResult({ quizId, playerName, relation, answers }) {
-  return request("POST", "/results", { quizId, playerName, relation, answers });
-}
+export const getNotifications      = (quizId) =>
+  request("GET", `/notifications/${quizId}`);
 
-// Get all results for a quiz
-export async function getResultsForQuiz(quizId) {
-  return request("GET", `/results/${quizId}`);
-}
+export const getUnreadCount        = (quizId) =>
+  request("GET", `/notifications/${quizId}/unread-count`);
 
-// ── Notifications ─────────────────────────────────────────────
-
-// Get all notifications for a quiz
-export async function getNotifications(quizId) {
-  return request("GET", `/notifications/${quizId}`);
-}
-
-// Get unread count
-export async function getUnreadCount(quizId) {
-  return request("GET", `/notifications/${quizId}/unread-count`);
-}
-
-// Mark all notifications as read
-export async function markNotificationsRead(quizId) {
-  return request("PATCH", `/notifications/${quizId}/mark-read`);
-}
+export const markNotificationsRead = (quizId) =>
+  request("PATCH", `/notifications/${quizId}/mark-read`);
