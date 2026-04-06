@@ -1,4 +1,4 @@
-// client/src/lib/api.js
+
 // ─────────────────────────────────────────────────────────────
 // FriendQuiz v2 — API client for Flask + SQLite backend
 // ─────────────────────────────────────────────────────────────
@@ -23,10 +23,13 @@ async function request(method, path, body) {
   return data;
 }
 
-export const createQuiz        = ({ creatorName, answers, sets }) => {
+export const createQuiz = ({ creatorName, answers, sets, password }) => {
   console.log("[api.js] createQuiz called, sets:", sets?.length, sets?.map(s=>s.id));
-  return request("POST", "/quizzes", { creatorName, answers, sets });
+  return request("POST", "/quizzes", { creatorName, answers, sets, password });
 };
+
+export const loginCreator = ({ username, password }) =>
+  request("POST", "/login", { username, password });
 
 export const getQuizByCode     = (code) =>
   request("GET", `/quizzes/${code}`);
