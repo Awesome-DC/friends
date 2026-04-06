@@ -1,17 +1,3 @@
-# server/app.py
-# ─────────────────────────────────────────────────────────────
-# FriendQuiz — Flask backend
-#
-# LOCAL:  Uses SQLite  (no config needed)
-# HOSTED: Uses Postgres (set DATABASE_URL env var on Render)
-#
-# Local setup:
-#   pip install flask flask-cors psycopg2-binary
-#   python app.py
-#
-# Runs on: http://localhost:3001
-# ─────────────────────────────────────────────────────────────
-
 import os
 import json
 import uuid
@@ -24,8 +10,9 @@ app = Flask(__name__)
 
 # ── CORS ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
-    "https://friends-hazel.vercel.app",
-    # "https://your-app.vercel.app",
+    # "http://localhost:5173",
+    # "http://localhost:4173",
+    "https://friends.hazel.vercel.app",
 ]
 
 CORS(
@@ -161,19 +148,23 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        # Safe migration: add sets column to existing DBs using a fresh connection
-        conn2 = psycopg2.connect(DATABASE_URL)
-        try:
-            cur2 = conn2.cursor()
-            cur2.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS sets TEXT DEFAULT '[]'")
-            conn2.commit()
-            print("✅ sets column ensured")
-        except Exception as e:
-            conn2.rollback()
-            print(f"Migration note: {e}")
-        finally:
-            cur2.close()
-            conn2.close()
+        # Safe migrations using fresh connections
+        for migration in [
+            "ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS sets TEXT DEFAULT '[]'",
+            "ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS password TEXT DEFAULT ''",
+        ]:
+            conn2 = psycopg2.connect(DATABASE_URL)
+            try:
+                cur2 = conn2.cursor()
+                cur2.execute(migration)
+                conn2.commit()
+                print(f"✅ Migration ok: {migration[:50]}")
+            except Exception as e:
+                conn2.rollback()
+                print(f"Migration note: {e}")
+            finally:
+                cur2.close()
+                conn2.close()
         print("✅ Postgres tables ready")
     else:
         db = sqlite3.connect(DB_PATH)
@@ -209,13 +200,16 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_notifs_quiz  ON notifications(quiz_id);
         """)
         db.commit()
-        # Safe migration for existing SQLite DBs
-        try:
-            db.execute("ALTER TABLE quizzes ADD COLUMN sets TEXT DEFAULT '[]'")
-            db.commit()
-            print("✅ SQLite sets column added")
-        except Exception:
-            pass  # column already exists
+        # Safe migrations for existing SQLite DBs
+        for migration in [
+            "ALTER TABLE quizzes ADD COLUMN sets TEXT DEFAULT '[]'",
+            "ALTER TABLE quizzes ADD COLUMN password TEXT DEFAULT ''",
+        ]:
+            try:
+                db.execute(migration)
+                db.commit()
+            except Exception:
+                pass  # column already exists
         db.close()
         print("✅ SQLite database ready (friendquiz.db)")
 
@@ -246,27 +240,69 @@ def create_quiz():
     answers      = data.get("answers")
     if not creator_name or not answers:
         return jsonify({"error": "creatorName and answers are required"}), 400
-    sets    = data.get("sets", [])
-    quiz_id = str(uuid.uuid4())
-    code    = make_code()
-    # Debug log
-    sets_json = json.dumps(sets)
+    sets         = data.get("sets", [])
+    password     = (data.get("password") or "").strip()
+    quiz_id      = str(uuid.uuid4())
+    code         = make_code()
+    sets_json    = json.dumps(sets)
     answers_json = json.dumps(answers)
     print(f"[create_quiz] creator={creator_name} sets_count={len(sets)} sets_json_len={len(sets_json)}")
     try:
-        db_exec(
-            "INSERT INTO quizzes (id, code, creator_name, answers, sets) VALUES (?, ?, ?, ?, ?)",
-            (quiz_id, code, creator_name, answers_json, sets_json)
-        )
-        db_commit()
-        # Verify what was actually saved
-        saved = db_exec("SELECT sets FROM quizzes WHERE id = ?", (quiz_id,), fetchone=True)
-        saved_sets = json.loads(dict(saved).get("sets") or "[]") if saved else []
-        print(f"[create_quiz] VERIFIED saved sets_count={len(saved_sets)}")
-        return jsonify({"id": quiz_id, "code": code, "sets_count": len(saved_sets)}), 201
+        if USE_POSTGRES:
+            db = get_db()
+            cur = db.cursor()
+            cur.execute(
+                "INSERT INTO quizzes (id, code, creator_name, answers, sets, password) VALUES (%s, %s, %s, %s, %s, %s)",
+                (quiz_id, code, creator_name, answers_json, sets_json, password)
+            )
+            db.commit()
+            cur.execute("SELECT sets FROM quizzes WHERE id = %s", (quiz_id,))
+            row = cur.fetchone()
+            raw = row["sets"] if row else "[]"
+            saved_count = len(json.loads(raw or "[]"))
+        else:
+            db = get_db()
+            db.execute(
+                "INSERT INTO quizzes (id, code, creator_name, answers, sets, password) VALUES (?, ?, ?, ?, ?, ?)",
+                (quiz_id, code, creator_name, answers_json, sets_json, password)
+            )
+            db.commit()
+            row = db.execute("SELECT sets FROM quizzes WHERE id = ?", (quiz_id,)).fetchone()
+            saved_count = len(json.loads(row["sets"] or "[]")) if row else 0
+        print(f"[create_quiz] VERIFIED saved sets_count={saved_count}")
+        return jsonify({"id": quiz_id, "code": code, "sets_count": saved_count}), 201
     except Exception as e:
-        print(f"[create_quiz] ERROR: {e}")
+        import traceback; traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+@app.post("/login")
+def login():
+    data     = request.get_json() or {}
+    username = (data.get("username") or "").strip().lower()
+    password = (data.get("password") or "").strip()
+    if not username or not password:
+        return jsonify({"error": "Username and password required"}), 400
+    if USE_POSTGRES:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            "SELECT id, code, creator_name, password FROM quizzes WHERE LOWER(creator_name) = %s ORDER BY created_at DESC LIMIT 1",
+            (username,)
+        )
+        row = cur.fetchone()
+    else:
+        row = db_exec(
+            "SELECT id, code, creator_name, password FROM quizzes WHERE LOWER(creator_name) = ? ORDER BY created_at DESC LIMIT 1",
+            (username,), fetchone=True
+        )
+    if row is None:
+        return jsonify({"error": "No quiz found for that username"}), 404
+    r = dict(row)
+    stored_pw = (r.get("password") or "").strip()
+    if stored_pw and stored_pw != password:
+        return jsonify({"error": "Wrong password"}), 401
+    return jsonify({"id": r["id"], "code": r["code"], "creator_name": r["creator_name"]}), 200
 
 
 @app.get("/quizzes/<code>")
