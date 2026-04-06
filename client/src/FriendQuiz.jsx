@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { RELATIONS } from "./lib/questions";
 import { PRESET_SETS, getUnsplashPhoto } from "./lib/presets";
-import { createQuiz, getQuizByCode, saveResult, getResultsForQuiz } from "./lib/api";
+import { createQuiz, getQuizByCode, saveResult, getResultsForQuiz, loginCreator } from "./lib/api";
 import { useNotifications } from "./hooks/useNotifications";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────
@@ -264,13 +264,19 @@ function ShareButtons({url,creatorName,score,pct}) {
 // ── Step 1: Creator name ───────────────────────────────────────────────────
 function CreatorNameScreen({onBack,onNext}) {
   const [name,setName]=useState("");
+  const [password,setPassword]=useState("");
+  const canProceed = name.trim() && password.trim().length >= 4;
   return (
     <DarkScreen>
       <div style={{fontSize:"3.5rem",textAlign:"center",marginBottom:16}}>👋</div>
-      <Logo text="What's your name?" size="1.9rem"/>
-      <Sub>Friends will see this on the quiz link</Sub>
-      <input className="fq-input" value={name} onChange={e=>setName(e.target.value)} placeholder="Your name…" onKeyDown={e=>{if(e.key==="Enter"&&name.trim())onNext(name.trim());}} style={{marginBottom:14}} autoFocus/>
-      <Row><BackBtn onClick={onBack}/><button className="fq-btn fq-btn-primary" onClick={()=>onNext(name.trim())} disabled={!name.trim()} style={{flex:1}}>Let's go →</button></Row>
+      <Logo text="Set up your profile" size="1.9rem"/>
+      <Sub>You'll use these to log back into your dashboard</Sub>
+      <label style={{fontFamily:"'Nunito',sans-serif",fontSize:"0.8rem",fontWeight:800,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:"1.5px",display:"block",marginBottom:6}}>Your name</label>
+      <input className="fq-input" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Amara" style={{marginBottom:14}} autoFocus/>
+      <label style={{fontFamily:"'Nunito',sans-serif",fontSize:"0.8rem",fontWeight:800,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:"1.5px",display:"block",marginBottom:6}}>Password (min 4 chars)</label>
+      <input className="fq-input" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Set a password…" onKeyDown={e=>{if(e.key==="Enter"&&canProceed)onNext(name.trim(),password.trim());}} style={{marginBottom:14}}/>
+      {password.length>0&&password.length<4&&<p style={{fontFamily:"'Nunito',sans-serif",color:"#f87171",fontSize:"0.82rem",marginBottom:10}}>Password must be at least 4 characters</p>}
+      <Row><BackBtn onClick={onBack}/><button className="fq-btn fq-btn-primary" onClick={()=>onNext(name.trim(),password.trim())} disabled={!canProceed} style={{flex:1}}>Let's go →</button></Row>
     </DarkScreen>
   );
 }
@@ -920,16 +926,59 @@ function AnswerPickerScreen({sets, creatorName, onBack, onDone}) {
 // ══════════════════════════════════════════════════════════════
 //  HOME
 // ══════════════════════════════════════════════════════════════
-function HomeScreen({onCreate,onTake}) {
+function HomeScreen({onCreate,onTake,onLogin}) {
+  return (
+    <div style={{height:"100%",background:`linear-gradient(145deg,${C.dark} 0%,#2d1458 55%,#1a0a3d 100%)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"2rem 1.5rem",position:"relative"}}>
+      {/* Dashboard login icon — top right */}
+      <button onClick={onLogin} style={{position:"absolute",top:16,right:16,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.18)",borderRadius:14,width:44,height:44,fontSize:"1.3rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} title="Login to my dashboard">
+        👤
+      </button>
+      <div style={{width:"100%",maxWidth:420,animation:"fadeUp 0.5s ease"}}>
+        <Logo size="clamp(2.6rem,9vw,3.8rem)"/>
+        <Sub mb="2.5rem">Create a quiz about yourself.<br/>See how well your friends really know you 👀</Sub>
+        <div style={{fontSize:"2.4rem",textAlign:"center",letterSpacing:10,marginBottom:"2.5rem"}}>🧠💛🤩🫶🔥</div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <button className="fq-btn fq-btn-primary" onClick={onCreate} style={{fontSize:"1.1rem",padding:"18px"}}>✏️ Create My Quiz</button>
+          <button className="fq-btn fq-btn-ghost" onClick={onTake}>🔗 Enter a Friend's Code</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoginScreen({onBack,onSuccess}) {
+  const [username,setUsername]=useState("");
+  const [password,setPassword]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+
+  async function handleLogin() {
+    if(!username.trim()||!password.trim()){setError("Enter your name and password");return;}
+    setLoading(true);setError("");
+    try{
+      const data=await loginCreator({username:username.trim(),password:password.trim()});
+      onSuccess(data);
+    }catch(e){
+      setError(e.message||"Login failed. Check your name and password.");
+    }finally{setLoading(false);}
+  }
+
   return (
     <DarkScreen>
-      <Logo size="clamp(2.6rem,9vw,3.8rem)"/>
-      <Sub mb="2.5rem">Create a quiz about yourself.<br/>See how well your friends really know you 👀</Sub>
-      <div style={{fontSize:"2.4rem",textAlign:"center",letterSpacing:10,marginBottom:"2.5rem"}}>🧠💛🤩🫶🔥</div>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <button className="fq-btn fq-btn-primary" onClick={onCreate} style={{fontSize:"1.1rem",padding:"18px"}}>✏️ Create My Quiz</button>
-        <button className="fq-btn fq-btn-ghost" onClick={onTake}>🔗 Enter a Friend's Code</button>
-      </div>
+      <div style={{fontSize:"3rem",textAlign:"center",marginBottom:16}}>👤</div>
+      <Logo text="My Dashboard" size="1.9rem"/>
+      <Sub>Log back into your quiz dashboard</Sub>
+      <label style={{fontFamily:"'Nunito',sans-serif",fontSize:"0.8rem",fontWeight:800,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:"1.5px",display:"block",marginBottom:6}}>Your name</label>
+      <input className="fq-input" value={username} onChange={e=>{setUsername(e.target.value);setError("");}} placeholder="e.g. Amara" style={{marginBottom:14}} autoFocus/>
+      <label style={{fontFamily:"'Nunito',sans-serif",fontSize:"0.8rem",fontWeight:800,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:"1.5px",display:"block",marginBottom:6}}>Password</label>
+      <input className="fq-input" type="password" value={password} onChange={e=>{setPassword(e.target.value);setError("");}} placeholder="Your password…" onKeyDown={e=>{if(e.key==="Enter")handleLogin();}} style={{marginBottom:14}}/>
+      {error&&<p style={{fontFamily:"'Nunito',sans-serif",color:"#f87171",fontSize:"0.88rem",marginBottom:12,textAlign:"center"}}>{error}</p>}
+      <Row>
+        <BackBtn onClick={onBack}/>
+        <button className="fq-btn fq-btn-primary" onClick={handleLogin} disabled={loading} style={{flex:1}}>
+          {loading?"Logging in…":"Login →"}
+        </button>
+      </Row>
     </DarkScreen>
   );
 }
@@ -949,7 +998,8 @@ export default function FriendQuiz() {
   const [localAnswers,setLocalAnswers]=useState([]);
   const [saving,setSaving]         =useState(false);
   const [pendingSets,setPendingSets]=useState([]);
-  const pendingSetsRef             =useRef([]);  // ref backup to avoid stale closure
+  const pendingSetsRef             =useRef([]);
+  const [creatorPassword,setCreatorPassword]=useState("");  // ref backup to avoid stale closure
   const go=useCallback(s=>setScreen(s),[]);
 
   useEffect(()=>{
@@ -985,7 +1035,7 @@ export default function FriendQuiz() {
       setsWithAnswers.forEach(s => { answers[s.id] = s.correctAnswer; });
       console.log("[handleQuizReady] setsWithAnswers count:", setsWithAnswers.length);
       console.log("[handleQuizReady] answers:", JSON.stringify(answers));
-      const payload = { creatorName, answers, sets: setsWithAnswers };
+      const payload = { creatorName, answers, sets: setsWithAnswers, password: creatorPassword };
       console.log("[handleQuizReady] payload sets count:", payload.sets.length);
       const result = await createQuiz(payload);
       console.log("[handleQuizReady] server response:", JSON.stringify(result));
@@ -1005,8 +1055,9 @@ export default function FriendQuiz() {
       {saving&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center"}}><p style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.5rem",color:"#fff"}}>Creating your quiz… 🎉</p></div>}
 
       {screen==="loading"       && <DarkScreen><p style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.5rem",color:"rgba(255,255,255,0.4)",textAlign:"center"}}>Loading quiz…</p></DarkScreen>}
-      {screen==="home"          && <HomeScreen onCreate={()=>go("creator-name")} onTake={()=>go("enter-code")}/>}
-      {screen==="creator-name"  && <CreatorNameScreen onBack={()=>go("home")} onNext={name=>{setCreatorName(name);go("set-picker");}}/>}
+      {screen==="home"          && <HomeScreen onCreate={()=>go("creator-name")} onTake={()=>go("enter-code")} onLogin={()=>go("login")}/>}
+      {screen==="login"          && <LoginScreen onBack={()=>go("home")} onSuccess={data=>{setCreatorName(data.creator_name);setQuizMeta({id:data.id,code:data.code});go("dashboard");}}/>}
+      {screen==="creator-name"  && <CreatorNameScreen onBack={()=>go("home")} onNext={(name,pw)=>{setCreatorName(name);setCreatorPassword(pw);go("set-picker");}}/>}
       {screen==="set-picker"    && <SetPickerScreen creatorName={creatorName} onBack={()=>go("creator-name")} onDone={sets=>{setPendingSets(sets);go("answer-picker");}} />}
       {screen==="answer-picker"  && <AnswerPickerScreen sets={pendingSets} creatorName={creatorName} onBack={()=>go("set-picker")} onDone={setsWithAnswers=>{pendingSetsRef.current=setsWithAnswers;setPendingSets(setsWithAnswers);go("custom-prompt");}}/>}
       {screen==="custom-prompt" && <CustomPromptScreen selectedSets={pendingSetsRef.current} creatorName={creatorName} onDone={handleQuizReady}/>}
