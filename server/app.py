@@ -1,3 +1,17 @@
+# server/app.py
+# ─────────────────────────────────────────────────────────────
+# FriendQuiz — Flask backend
+#
+# LOCAL:  Uses SQLite  (no config needed)
+# HOSTED: Uses Postgres (set DATABASE_URL env var on Render)
+#
+# Local setup:
+#   pip install flask flask-cors psycopg2-binary
+#   python app.py
+#
+# Runs on: http://localhost:3001
+# ─────────────────────────────────────────────────────────────
+
 import os
 import json
 import uuid
@@ -10,8 +24,6 @@ app = Flask(__name__)
 
 # ── CORS ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
-    # "http://localhost:5173",
-    # "http://localhost:4173",
     "https://friends-hazel.vercel.app",
 ]
 
@@ -283,25 +295,31 @@ def login():
     password = (data.get("password") or "").strip()
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
+
+    # Match on BOTH name AND password together so duplicate names work fine
     if USE_POSTGRES:
         db = get_db()
         cur = db.cursor()
         cur.execute(
-            "SELECT id, code, creator_name, password FROM quizzes WHERE LOWER(creator_name) = %s ORDER BY created_at DESC LIMIT 1",
-            (username,)
+            """SELECT id, code, creator_name FROM quizzes
+               WHERE LOWER(creator_name) = %s AND password = %s
+               ORDER BY created_at DESC LIMIT 1""",
+            (username, password)
         )
         row = cur.fetchone()
     else:
         row = db_exec(
-            "SELECT id, code, creator_name, password FROM quizzes WHERE LOWER(creator_name) = ? ORDER BY created_at DESC LIMIT 1",
-            (username,), fetchone=True
+            """SELECT id, code, creator_name FROM quizzes
+               WHERE LOWER(creator_name) = ? AND password = ?
+               ORDER BY created_at DESC LIMIT 1""",
+            (username, password), fetchone=True
         )
+
     if row is None:
-        return jsonify({"error": "No quiz found for that username"}), 404
+        # Give a clear error — wrong name, wrong password, or old quiz with no password
+        return jsonify({"error": "Incorrect name or password. Note: quizzes created before login was added have no password — recreate your quiz to use this feature."}), 401
+
     r = dict(row)
-    stored_pw = (r.get("password") or "").strip()
-    if stored_pw and stored_pw != password:
-        return jsonify({"error": "Wrong password"}), 401
     return jsonify({"id": r["id"], "code": r["code"], "creator_name": r["creator_name"]}), 200
 
 
