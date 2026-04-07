@@ -251,7 +251,7 @@ function ShareButtons({url,creatorName,score,pct}) {
         </button>
       </div>
       <button className="share-btn share-copy" onClick={copyLink}>
-        {copied ? "✅ Copied!" : `🔗 share ${creatorName} link`}
+        {copied?"✅ Copied!":"🔗 Copy Link"}
       </button>
     </div>
   );
@@ -547,12 +547,7 @@ function DashboardScreen({creatorName,quizCode,quizId,onHome}) {
             <button onClick={requestPermission} style={{background:"rgba(245,158,11,0.3)",border:"1px solid rgba(245,158,11,0.5)",borderRadius:10,padding:"6px 14px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"0.8rem",cursor:"pointer"}}>Allow</button>
           </div>
         )}
-        {permission==="granted"&&(
-          <div style={{background:"rgba(16,185,129,0.12)",border:"1px solid rgba(16,185,129,0.3)",borderRadius:16,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:8}}>
-            <span>✅</span>
-            <p style={{fontFamily:"'Nunito',sans-serif",fontSize:"0.82rem",color:"rgba(255,255,255,0.6)"}}>Browser notifications enabled!</p>
-          </div>
-        )}
+
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
           <div>
