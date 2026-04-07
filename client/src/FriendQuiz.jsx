@@ -982,9 +982,27 @@ function LoginScreen({onBack,onSuccess}) {
 // ══════════════════════════════════════════════════════════════
 export default function FriendQuiz() {
   const urlCode=useUrlCode();
-  const [screen,setScreen]         =useState(()=>urlCode?"loading":"home");
-  const [creatorName,setCreatorName]=useState("");
-  const [quizMeta,setQuizMeta]     =useState(null);
+
+  // ── Read saved session from localStorage ──────────────────────
+  function readSession() {
+    try { return JSON.parse(localStorage.getItem("fq_session")||"null"); } catch { return null; }
+  }
+  function writeSession(name, meta) {
+    try { localStorage.setItem("fq_session", JSON.stringify({creatorName:name, quizMeta:meta})); } catch {}
+  }
+  function clearSession() {
+    try { localStorage.removeItem("fq_session"); } catch {}
+  }
+
+  const savedSession = !urlCode ? readSession() : null;
+
+  const [screen,setScreen]         =useState(()=>{
+    if(urlCode) return "loading";
+    if(savedSession?.quizMeta) return "dashboard";
+    return "home";
+  });
+  const [creatorName,setCreatorName]=useState(()=>savedSession?.creatorName||"");
+  const [quizMeta,setQuizMeta]     =useState(()=>savedSession?.quizMeta||null);
   const [activeQuiz,setActiveQuiz] =useState(null);
   const [playerName,setPlayerName] =useState("");
   const [relation,setRelation]     =useState("");
@@ -993,8 +1011,22 @@ export default function FriendQuiz() {
   const [saving,setSaving]         =useState(false);
   const [pendingSets,setPendingSets]=useState([]);
   const pendingSetsRef             =useRef([]);
-  const [creatorPassword,setCreatorPassword]=useState("");  // ref backup to avoid stale closure
+  const [creatorPassword,setCreatorPassword]=useState("");
   const go=useCallback(s=>setScreen(s),[]);
+
+  // Save session whenever quizMeta + creatorName are set
+  useEffect(()=>{
+    if(quizMeta && creatorName) writeSession(creatorName, quizMeta);
+  },[quizMeta, creatorName]);
+
+  function goHome(){
+    clearSession();
+    setQuizMeta(null);
+    setCreatorName("");
+    setActiveQuiz(null);
+    setFinalResult(null);
+    go("home");
+  }
 
   useEffect(()=>{
     if(!urlCode)return;
@@ -1050,7 +1082,7 @@ export default function FriendQuiz() {
 
       {screen==="loading"       && <DarkScreen><p style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.5rem",color:"rgba(255,255,255,0.4)",textAlign:"center"}}>Loading quiz…</p></DarkScreen>}
       {screen==="home"          && <HomeScreen onCreate={()=>go("creator-name")} onTake={()=>go("enter-code")} onLogin={()=>go("login")}/>}
-      {screen==="login"          && <LoginScreen onBack={()=>go("home")} onSuccess={data=>{setCreatorName(data.creator_name);setQuizMeta({id:data.id,code:data.code});go("dashboard");}}/>}
+      {screen==="login"          && <LoginScreen onBack={()=>go("home")} onSuccess={data=>{setCreatorName(data.creator_name);setQuizMeta({id:data.id,code:data.code});writeSession(data.creator_name,{id:data.id,code:data.code});go("dashboard");}}/>}
       {screen==="creator-name"  && <CreatorNameScreen onBack={()=>go("home")} onNext={(name,pw)=>{setCreatorName(name);setCreatorPassword(pw);go("set-picker");}}/>}
       {screen==="set-picker"    && <SetPickerScreen creatorName={creatorName} onBack={()=>go("creator-name")} onDone={sets=>{setPendingSets(sets);go("answer-picker");}} />}
       {screen==="answer-picker"  && <AnswerPickerScreen sets={pendingSets} creatorName={creatorName} onBack={()=>go("set-picker")} onDone={setsWithAnswers=>{pendingSetsRef.current=setsWithAnswers;setPendingSets(setsWithAnswers);go("custom-prompt");}}/>}
