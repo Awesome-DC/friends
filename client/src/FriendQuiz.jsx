@@ -1056,13 +1056,13 @@ export default function FriendQuiz() {
       {screen==="answer-picker"  && <AnswerPickerScreen sets={pendingSets} creatorName={creatorName} onBack={()=>go("set-picker")} onDone={setsWithAnswers=>{pendingSetsRef.current=setsWithAnswers;setPendingSets(setsWithAnswers);go("custom-prompt");}}/>}
       {screen==="custom-prompt" && <CustomPromptScreen selectedSets={pendingSetsRef.current} creatorName={creatorName} onDone={handleQuizReady}/>}
       {screen==="profile-created"&&quizMeta && <ProfileCreatedScreen creatorName={creatorName} quizCode={quizMeta.code} onViewDashboard={()=>go("dashboard")}/>}
-      {screen==="dashboard"     &&quizMeta  && <DashboardScreen creatorName={creatorName} quizCode={quizMeta.code} quizId={quizMeta.id} onHome={()=>go("home")}/>}
+      {screen==="dashboard"     &&quizMeta  && <DashboardScreen creatorName={creatorName} quizCode={quizMeta.code} quizId={quizMeta.id} onHome={goHome}/>}
       {screen==="enter-code"    && <EnterCodeScreen onBack={()=>go("home")} onLoad={quiz=>{setActiveQuiz(quiz);go("welcome");}}/>}
       {screen==="welcome"       &&activeQuiz && <WelcomeScreen quiz={activeQuiz} onNext={()=>go("player-intro")}/>}
       {screen==="player-intro"  &&activeQuiz && <PlayerIntroScreen quiz={activeQuiz} onBack={()=>go("welcome")} onStart={(name,rel)=>{setPlayerName(name);setRelation(rel);go("player-ready");}}/>}
       {screen==="player-ready"  &&activeQuiz && <PlayerReadyScreen playerName={playerName} quiz={activeQuiz} onStart={()=>go("play")}/>}
       {screen==="play"          &&activeQuiz && <PlayScreen quiz={activeQuiz} playerName={playerName} relation={relation} onFinish={(result,answers)=>{setFinalResult(result);setLocalAnswers(answers);go("results");}}/>}
-      {screen==="results"       &&activeQuiz&&finalResult && <ResultsScreen quiz={activeQuiz} playerName={playerName} relation={relation} result={finalResult} localAnswers={localAnswers} onHome={()=>{go("home");setActiveQuiz(null);setFinalResult(null);}}/>}
+      {screen==="results"       &&activeQuiz&&finalResult && <ResultsScreen quiz={activeQuiz} playerName={playerName} relation={relation} result={finalResult} localAnswers={localAnswers} onHome={()=>{setActiveQuiz(null);setFinalResult(null);go("home");}}/>}
       </div>
     </div>
   );
